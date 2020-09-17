@@ -1,0 +1,19 @@
+name: LinkChest
+version: ${project.version}
+main: linkchest.linkchest.LinkChest
+api-version: 1.13
+description: チェストと鍵をリンクさせ遠距離からチェストを開くことができるPluginです
+depend:
+  - LockettePro
+
+commands:
+  lc:
+    usage:  /lc
+    description: 未リンクの鍵を入手します
+  linkchest:
+    usage:  /linkchest
+    description: 未リンクの鍵を入手します
+
+permissions:
+  linkchest.op:
+    default: op
