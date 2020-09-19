@@ -18,6 +18,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -30,7 +31,6 @@ import java.util.List;
 public final class LinkChest extends JavaPlugin implements Listener {
     private static LinkChest plugin;
     private LocketteProAPI LockChestAPI = new LocketteProAPI();
-    public static RightClickDoubleEventCancel RCDEC = new RightClickDoubleEventCancel();
 
     public static LinkChest getPlugin() {
         return plugin;
@@ -40,8 +40,8 @@ public final class LinkChest extends JavaPlugin implements Listener {
     public void onEnable() {
         plugin = this;
         // Plugin startup logic
+        this.saveDefaultConfig();
         Bukkit.getServer().getPluginManager().registerEvents(this, this);
-        Bukkit.getServer().getPluginManager().registerEvents(RCDEC, this);
         getLogger().info(ChatColor.GREEN + "プラグインが有効化されました");
     }
 
@@ -54,9 +54,27 @@ public final class LinkChest extends JavaPlugin implements Listener {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("lc") || command.getName().equalsIgnoreCase("linkchest")) {
             if(sender.hasPermission("linkchest.op")) {
-                if(sender instanceof Player) {
-                    Player p = (Player) sender;
-                    p.getInventory().addItem(ItemNameSet(Material.TRIPWIRE_HOOK , "§5§l未リンクの鍵" , 0));
+                if(args.length >= 1) {
+                    Player p = Bukkit.getServer().getPlayer(args[0]);
+                    if(p == null) {
+                        sender.sendMessage("§4そのプレイヤーは現在サーバーに参加していません");
+                    }
+                    ItemStack key = ItemNameSet(Material.TRIPWIRE_HOOK , "§5§l未リンクの鍵" , 0);
+                    ItemMeta meta = key.getItemMeta();
+                    List<String> lores = getConfig().getStringList("Lore");
+                    meta.setLore(lores);
+                    key.setItemMeta(meta);
+                    p.getInventory().addItem(key);
+                } else {
+                    if(sender instanceof Player) {
+                        Player p = (Player) sender;
+                        ItemStack key = ItemNameSet(Material.TRIPWIRE_HOOK , "§5§l未リンクの鍵" , 0);
+                        ItemMeta meta = key.getItemMeta();
+                        List<String> lores = getConfig().getStringList("Lore");
+                        meta.setLore(lores);
+                        key.setItemMeta(meta);
+                        p.getInventory().addItem(key);
+                    }
                 }
                 return true;
             } else {
@@ -151,7 +169,9 @@ public final class LinkChest extends JavaPlugin implements Listener {
                     for(int ItemFlag = 0 ; ItemFlag < ItemHideFlags.size() ; ItemFlag++) {
                         meta.addItemFlags(ItemHideFlags.get(ItemFlag));
                     }
-                    meta.setLore(Arrays.asList("§5§lチェスト座標: " + ChestLocation.getWorld().getName() + "," + ChestLocation.getBlockX() + "," + ChestLocation.getBlockY() + "," + ChestLocation.getBlockZ()));
+                    List<String> lores = getConfig().getStringList("Lore");
+                    lores.addAll(Arrays.asList("§4§lチェスト座標: " + ChestLocation.getWorld().getName() + "," + ChestLocation.getBlockX() + "," + ChestLocation.getBlockY() + "," + ChestLocation.getBlockZ()));
+                    meta.setLore(lores);
                     Key.setItemMeta(meta);
                     KeyLocation.getBlock().setType(Material.AIR);
                     KeyLocation.getWorld().dropItem(KeyLocation , Key);
@@ -182,6 +202,9 @@ public final class LinkChest extends JavaPlugin implements Listener {
         if(!(e.getAction().equals(Action.LEFT_CLICK_AIR) || e.getAction().equals(Action.RIGHT_CLICK_AIR))) {
             return;
         }
+        if(!e.getHand().equals(EquipmentSlot.HAND)) {
+            return;
+        }
         if (item == null || item.getType() == Material.AIR) {
             return;
         }
@@ -194,11 +217,7 @@ public final class LinkChest extends JavaPlugin implements Listener {
         if (!item.getItemMeta().getDisplayName().equals("§6§lリンク済みの鍵")) {
             return;
         }
-        if(RCDEC.Cancelers.get(p.getUniqueId()) != null && RCDEC.Cancelers.get(p.getUniqueId()).getOrDefault("LinkChest" , false)) {
-            return;
-        }
-        RCDEC.CoolTimeCount(p , "LinkChest");
-        String[] chestloc = item.getItemMeta().getLore().get(0).replace("§5§lチェスト座標: " , "").split(",");
+        String[] chestloc = item.getItemMeta().getLore().get((item.getItemMeta().getLore().size() - 1)).replace("§4§lチェスト座標: " , "").split(",");
         Location ChestLocation = new Location(Bukkit.getWorld(chestloc[0]) , Integer.parseInt(chestloc[1]) , Integer.parseInt(chestloc[2]) , Integer.parseInt(chestloc[3]));
         BlockState blockstate = ChestLocation.getBlock().getState();
         if(blockstate instanceof Chest || blockstate instanceof DoubleChest) {
